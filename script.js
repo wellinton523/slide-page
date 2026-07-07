@@ -1,0 +1,156 @@
+let currentSlide = 0;
+let currentDeckName = document.body.classList.contains('theme-bella') ? 'bella' : 'maria';
+let transitionOverlay = null;
+
+function getSlides() {
+    const deck = document.querySelector('.deck');
+    if (!deck) return [];
+    return Array.from(deck.querySelectorAll('.slide'));
+}
+
+function ensureTransitionOverlay() {
+    if (transitionOverlay) return transitionOverlay;
+
+    transitionOverlay = document.createElement('div');
+    transitionOverlay.className = 'deck-transition';
+    document.body.appendChild(transitionOverlay);
+    return transitionOverlay;
+}
+
+function setTheme(theme) {
+    document.body.classList.remove('theme-maria', 'theme-bella');
+    document.body.classList.add(theme === 'bella' ? 'theme-bella' : 'theme-maria');
+    currentDeckName = theme;
+}
+
+function renderSlides() {
+    const deck = document.querySelector('.deck');
+    if (!deck) return;
+
+    const slides = getSlides();
+    const dotsContainer = deck.querySelector('.dots');
+
+    slides.forEach((slide, index) => {
+        slide.classList.toggle('active', index === currentSlide);
+    });
+
+    if (dotsContainer) {
+        dotsContainer.innerHTML = slides.map((_, index) => `<span class="dot ${index === 0 ? 'active' : ''}"></span>`).join('');
+
+        const dots = Array.from(dotsContainer.children);
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentSlide);
+        });
+    }
+}
+
+function goToSlide(index) {
+    const slides = getSlides();
+    if (!slides.length) return;
+
+    currentSlide = (index + slides.length) % slides.length;
+    renderSlides();
+}
+
+function updateToggleButtonLabel() {
+    document.querySelectorAll('[data-action="toggle"]').forEach((button) => {
+        if (currentDeckName === 'bella') {
+            button.textContent = 'Lei Maria da Penha • Lei nº 11.340';
+            button.dataset.target = 'maria';
+        } else {
+            button.textContent = 'School of Darkness • 1954';
+            button.dataset.target = 'bella';
+        }
+    });
+}
+
+async function switchDeck(target) {
+    const deck = document.querySelector('.deck');
+    if (!deck) return;
+
+    const overlay = ensureTransitionOverlay();
+    overlay.classList.add('active');
+
+    const source = target === 'bella' ? 'bella-dodd.html' : 'index.html';
+
+    try {
+        const response = await fetch(source);
+        if (!response.ok) throw new Error('Falha ao carregar a apresentação');
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const incomingDeck = doc.querySelector('main.deck');
+
+        if (!incomingDeck) throw new Error('Estrutura da apresentação não encontrada');
+
+        setTheme(target);
+        await new Promise((resolve) => window.setTimeout(resolve, 220));
+        deck.innerHTML = incomingDeck.innerHTML;
+        currentSlide = 0;
+        renderSlides();
+        updateToggleButtonLabel();
+        window.requestAnimationFrame(() => overlay.classList.remove('active'));
+    } catch (error) {
+        overlay.classList.remove('active');
+    }
+}
+
+let controlsVisible = false;
+
+function setControlsVisible(visible) {
+    controlsVisible = visible;
+
+    document.querySelectorAll('.controls-wrapper').forEach((wrapper) => {
+        wrapper.classList.toggle('is-hidden', !visible);
+    });
+
+    document.querySelectorAll('.toggle-btn').forEach((button) => {
+        button.classList.toggle('is-hidden', !visible);
+    });
+
+    document.querySelectorAll('.controls-toggle-wrapper').forEach((wrapper) => {
+        wrapper.classList.remove('is-hidden');
+    });
+}
+
+function handleControlClick(event) {
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+
+    if (button.dataset.action === 'next') {
+        goToSlide(currentSlide + 1);
+    }
+
+    if (button.dataset.action === 'prev') {
+        goToSlide(currentSlide - 1);
+    }
+
+    if (button.dataset.action === 'toggle') {
+        switchDeck(button.dataset.target);
+    }
+
+    if (button.dataset.action === 'hide-controls') {
+        setControlsVisible(!controlsVisible);
+    }
+}
+
+function handleKeydown(event) {
+    if (event.key === 'ArrowRight' || event.key === ' ') {
+        event.preventDefault();
+        goToSlide(currentSlide + 1);
+    }
+
+    if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        goToSlide(currentSlide - 1);
+    }
+}
+
+document.addEventListener('click', handleControlClick);
+document.addEventListener('keydown', handleKeydown);
+
+setTheme(currentDeckName);
+renderSlides();
+updateToggleButtonLabel();
+setControlsVisible(false);
