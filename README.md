@@ -32,3 +32,6 @@ ___Slides atuais:___
 >Lei Maria da Penha
 
 >SCHOOL OF DARKNESS
+
+
+ **<p align="right"> Erebonys Studios: Weto/Nys </p>**
