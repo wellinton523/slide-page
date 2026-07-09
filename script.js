@@ -23,6 +23,25 @@ function setTheme(theme) {
     currentDeckName = theme;
 }
 
+function updateShaderButton() {
+    const button = document.querySelector('[data-action="light-mode"]');
+    if (!button) return;
+
+    const isLite = document.body.classList.contains('shader-lite');
+    button.classList.toggle('is-active', isLite);
+    button.setAttribute('aria-pressed', String(isLite));
+
+    const icon = button.querySelector('.material-symbols-rounded');
+    if (icon) {
+        icon.textContent = isLite ? 'speed' : 'speed';
+    }
+
+    const label = button.querySelector('.btn-label');
+    if (label) {
+        label.textContent = isLite ? 'Shader completo' : 'Shader leve';
+    }
+}
+
 function renderSlides() {
     const deck = document.querySelector('.deck');
     if (!deck) return;
@@ -133,6 +152,11 @@ function handleControlClick(event) {
     if (button.dataset.action === 'hide-controls') {
         setControlsVisible(!controlsVisible);
     }
+
+    if (button.dataset.action === 'light-mode') {
+        document.body.classList.toggle('shader-lite');
+        updateShaderButton();
+    }
 }
 
 function handleKeydown(event) {
@@ -153,4 +177,5 @@ document.addEventListener('keydown', handleKeydown);
 setTheme(currentDeckName);
 renderSlides();
 updateToggleButtonLabel();
+updateShaderButton();
 setControlsVisible(false);

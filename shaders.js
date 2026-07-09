@@ -11,15 +11,31 @@ if (canvasHost) {
     let nebulae = [];
     let shootingStars = [];
     let lightningBolts = [];
+    let lastLiteState = document.body.classList.contains('shader-lite');
+
+    function getShaderSettings() {
+        const isLite = document.body.classList.contains('shader-lite');
+
+        return {
+            particleCount: isLite ? Math.max(80, Math.floor((width * height) / 3200)) : Math.max(170, Math.floor((width * height) / 1700)),
+            orbCount: isLite ? 2 : 3,
+            shootingStarCount: isLite ? 2 : 5,
+            lightningEnabled: false,
+            glowStrength: isLite ? 0.55 : 0.8,
+            shimmerOpacity: isLite ? 0.004 : 0.01,
+            particleSpeed: isLite ? 0.7 : 1
+        };
+    }
 
     function createParticles() {
-        const amount = Math.max(300, Math.floor((width * height) / 1100));
+        const settings = getShaderSettings();
+        const amount = settings.particleCount;
         particles = Array.from({ length: amount }, () => ({
             x: Math.random() * width,
             y: Math.random() * height,
             radius: Math.random() * 1.8 + 0.2,
-            vx: (Math.random() - 0.5) * (0.28 + Math.random() * 0.12),
-            vy: (Math.random() - 0.5) * (0.28 + Math.random() * 0.12),
+            vx: (Math.random() - 0.5) * (0.16 + Math.random() * 0.08) * settings.particleSpeed,
+            vy: (Math.random() - 0.5) * (0.16 + Math.random() * 0.08) * settings.particleSpeed,
             alpha: Math.random() * 0.35 + 0.12,
             twinkle: Math.random() * Math.PI * 2,
             twinkleSpeed: 0.001 + Math.random() * 0.003,
@@ -30,7 +46,8 @@ if (canvasHost) {
     }
 
     function createOrbs() {
-        orbs = Array.from({ length: 5 }, (_, index) => ({
+        const settings = getShaderSettings();
+        orbs = Array.from({ length: settings.orbCount }, (_, index) => ({
             x: width * (0.18 + index * 0.16),
             y: height * (0.2 + (index % 3) * 0.2),
             radius: 110 + index * 35,
@@ -87,7 +104,8 @@ if (canvasHost) {
     }
 
     function createShootingStars() {
-        shootingStars = Array.from({ length: 14 }, () => ({
+        const settings = getShaderSettings();
+        shootingStars = Array.from({ length: settings.shootingStarCount }, () => ({
             x: Math.random() * width * 1.2 - width * 0.1,
             y: Math.random() * height,
             length: 80 + Math.random() * 120,
@@ -97,6 +115,14 @@ if (canvasHost) {
             life: Math.random() * 120 + 70,
             timer: 0
         }));
+    }
+
+    function refreshShaderScene() {
+        createParticles();
+        createOrbs();
+        createNebulae();
+        createShootingStars();
+        lightningBolts = [];
     }
 
     function resize() {
@@ -110,15 +136,12 @@ if (canvasHost) {
         canvas.style.height = `${height}px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        createParticles();
-        createOrbs();
-        createNebulae();
-        createShootingStars();
-        lightningBolts = [];
+        refreshShaderScene();
     }
 
     function drawBackground(time) {
         const palette = getThemePalette();
+        const settings = getShaderSettings();
         const gradient = ctx.createLinearGradient(0, 0, width, height);
         gradient.addColorStop(0, palette.backgroundTop);
         gradient.addColorStop(0.45, palette.backgroundMid);
@@ -128,6 +151,7 @@ if (canvasHost) {
 
         ctx.save();
         ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = settings.glowStrength;
         nebulae.forEach((nebula, index) => {
             const offsetX = Math.sin(time * 0.00017 + index * 1.2) * 20;
             const offsetY = Math.cos(time * 0.00014 + index * 0.9) * 16;
@@ -140,7 +164,7 @@ if (canvasHost) {
         });
         ctx.restore();
 
-        const shimmer = Math.sin(time * 0.00045) * 0.02 + 0.02;
+        const shimmer = Math.sin(time * 0.00045) * settings.shimmerOpacity + settings.shimmerOpacity;
         ctx.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
         ctx.fillRect(0, 0, width, height);
         ctx.fillStyle = palette.shimmer;
@@ -176,6 +200,8 @@ function drawBoltPath(points) {
 }
 
 function drawLightning() {
+    const settings = getShaderSettings();
+    if (!settings.lightningEnabled) return;
 
     // cria novos raios
     if (Math.random() < 0.02 && lightningBolts.length < 4) {
@@ -391,12 +417,23 @@ function drawLightning() {
     function animate(time) {
         ctx.clearRect(0, 0, width, height);
         drawBackground(time);
-        //drawLightning();
         drawOrbs(time);
         drawParticles(time);
-        drawShootingStars(time);
+        if (!document.body.classList.contains('shader-lite')) {
+            drawShootingStars(time);
+        }
         requestAnimationFrame(animate);
     }
+
+    const shaderStateObserver = new MutationObserver(() => {
+        const isLite = document.body.classList.contains('shader-lite');
+        if (isLite !== lastLiteState) {
+            lastLiteState = isLite;
+            refreshShaderScene();
+        }
+    });
+
+    shaderStateObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
     canvasHost.appendChild(canvas);
     window.addEventListener('resize', resize);
