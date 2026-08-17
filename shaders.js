@@ -7,30 +7,31 @@ if (canvasHost) {
     let width = 0;
     let height = 0;
     let particles = [];
+    let leaves = [];
+    let molecules = [];
     let orbs = [];
     let nebulae = [];
     let shootingStars = [];
-    let lightningBolts = [];
     let lastLiteState = document.body.classList.contains('shader-lite');
 
     function getShaderSettings() {
         const isLite = document.body.classList.contains('shader-lite');
 
         return {
-            particleCount: isLite ? Math.max(80, Math.floor((width * height) / 3200)) : Math.max(170, Math.floor((width * height) / 1700)),
+            particleCount: isLite ? Math.max(60, Math.floor((width * height) / 3800)) : Math.max(170, Math.floor((width * height) / 1700)),
+            leafCount: 28,
+            moleculeCount: 14,
             orbCount: isLite ? 2 : 3,
-            shootingStarCount: isLite ? 2 : 5,
-            lightningEnabled: false,
-            glowStrength: isLite ? 0.55 : 0.8,
-            shimmerOpacity: isLite ? 0.004 : 0.01,
-            particleSpeed: isLite ? 0.7 : 1
+            shootingStarCount: isLite ? 0 : 5,
+            glowStrength: isLite ? 0.45 : 0.8,
+            shimmerOpacity: isLite ? 0.002 : 0.01,
+            particleSpeed: isLite ? 0.6 : 1
         };
     }
 
     function createParticles() {
         const settings = getShaderSettings();
-        const amount = settings.particleCount;
-        particles = Array.from({ length: amount }, () => ({
+        particles = Array.from({ length: settings.particleCount }, () => ({
             x: Math.random() * width,
             y: Math.random() * height,
             radius: Math.random() * 1.8 + 0.2,
@@ -43,6 +44,45 @@ if (canvasHost) {
             drift: (Math.random() - 0.5) * 0.08,
             type: Math.random() > 0.92 ? 'star' : 'dust'
         }));
+    }
+
+    function createLeaves() {
+        const settings = getShaderSettings();
+        leaves = Array.from({ length: settings.leafCount }, () => ({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            size: 6 + Math.random() * 10,
+            angle: Math.random() * Math.PI * 2,
+            spin: (Math.random() - 0.5) * 0.03,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: 0.4 + Math.random() * 0.8,
+            oscillation: Math.random() * Math.PI * 2,
+            oscSpeed: 0.01 + Math.random() * 0.02
+        }));
+    }
+
+    function createMolecules() {
+        const settings = getShaderSettings();
+        molecules = Array.from({ length: settings.moleculeCount }, () => {
+            const atomCount = 3 + Math.floor(Math.random() * 3);
+            const atoms = [];
+            for (let i = 0; i < atomCount; i++) {
+                atoms.push({
+                    ox: (Math.random() - 0.5) * 35,
+                    oy: (Math.random() - 0.5) * 35,
+                    radius: 3 + Math.random() * 4
+                });
+            }
+            return {
+                x: Math.random() * width,
+                y: Math.random() * height,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.005,
+                atoms: atoms
+            };
+        });
     }
 
     function createOrbs() {
@@ -58,6 +98,7 @@ if (canvasHost) {
 
     function getThemePalette() {
         const isBella = document.body.classList.contains('theme-bella');
+        const isNature = document.body.classList.contains('theme-nature') || document.body.classList.contains('theme-verde');
 
         if (isBella) {
             return {
@@ -69,11 +110,33 @@ if (canvasHost) {
                 nebulaThree: 'rgba(170, 118, 56, 0.16)',
                 shimmer: 'rgba(255, 230, 196, 0.05)',
                 orbGlow: 'rgba(255, 185, 90, 0.18)',
-                orbSecondary: 'rgba(134, 83, 44, 0.1)',
                 particleGlow: 'rgba(255, 236, 203, 0.6)',
                 particleSecondary: 'rgba(228, 176, 100, 0.16)',
-                starCore: 'rgba(255, 248, 232, 0.85)',
-                starTrail: 'rgba(255, 228, 180, 0.4)'
+                starTrail: 'rgba(255, 228, 180, 0.4)',
+                leafFill: 'rgba(212, 143, 56, 0.4)',
+                leafStroke: 'rgba(255, 196, 112, 0.7)',
+                chemBond: 'rgba(242, 166, 90, 0.25)',
+                chemAtom: 'rgba(255, 200, 130, 0.6)'
+            };
+        }
+
+        if (isNature) {
+            return {
+                backgroundTop: '#020d07',
+                backgroundMid: '#061a10',
+                backgroundBottom: '#010804',
+                nebulaOne: 'rgba(16, 185, 129, 0.18)',
+                nebulaTwo: 'rgba(52, 211, 153, 0.14)',
+                nebulaThree: 'rgba(5, 150, 105, 0.16)',
+                shimmer: 'rgba(209, 250, 229, 0.03)',
+                orbGlow: 'rgba(52, 211, 153, 0.2)',
+                particleGlow: 'rgba(167, 243, 208, 0.65)',
+                particleSecondary: 'rgba(110, 231, 183, 0.2)',
+                starTrail: 'rgba(167, 243, 208, 0.35)',
+                leafFill: 'rgba(16, 185, 129, 0.35)',
+                leafStroke: 'rgba(110, 231, 183, 0.75)',
+                chemBond: 'rgba(52, 211, 153, 0.3)',
+                chemAtom: 'rgba(167, 243, 208, 0.7)'
             };
         }
 
@@ -86,11 +149,13 @@ if (canvasHost) {
             nebulaThree: 'rgba(174, 64, 255, 0.16)',
             shimmer: 'rgba(255, 255, 255, 0.03)',
             orbGlow: 'rgba(122, 245, 255, 0.16)',
-            orbSecondary: 'rgba(90, 88, 255, 0.09)',
             particleGlow: 'rgba(210, 240, 255, 0.55)',
             particleSecondary: 'rgba(160, 190, 255, 0.14)',
-            starCore: 'rgba(255, 255, 255, 0.85)',
-            starTrail: 'rgba(255, 255, 255, 0.33)'
+            starTrail: 'rgba(255, 255, 255, 0.33)',
+            leafFill: 'rgba(0, 196, 255, 0.25)',
+            leafStroke: 'rgba(122, 245, 255, 0.5)',
+            chemBond: 'rgba(0, 196, 255, 0.2)',
+            chemAtom: 'rgba(210, 240, 255, 0.5)'
         };
     }
 
@@ -119,10 +184,11 @@ if (canvasHost) {
 
     function refreshShaderScene() {
         createParticles();
+        createLeaves();
+        createMolecules();
         createOrbs();
         createNebulae();
         createShootingStars();
-        lightningBolts = [];
     }
 
     function resize() {
@@ -171,151 +237,6 @@ if (canvasHost) {
         ctx.fillRect(0, 0, width, height);
     }
 
-function drawJaggedLightning(x1, y1, x2, y2, displacement = 30, segments = 14) {
-    const points = [{ x: x1, y: y1 }];
-
-    for (let i = 1; i < segments; i++) {
-        const t = i / segments;
-
-        points.push({
-            x: x1 + (x2 - x1) * t + (Math.random() - 0.5) * displacement,
-            y: y1 + (y2 - y1) * t + (Math.random() - 0.5) * displacement
-        });
-    }
-
-    points.push({ x: x2, y: y2 });
-
-    return points;
-}
-
-function drawBoltPath(points) {
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-
-    for (let i = 1; i < points.length; i++) {
-        ctx.lineTo(points[i].x, points[i].y);
-    }
-
-    ctx.stroke();
-}
-
-function drawLightning() {
-    const settings = getShaderSettings();
-    if (!settings.lightningEnabled) return;
-
-    // cria novos raios
-    if (Math.random() < 0.02 && lightningBolts.length < 4) {
-        const startX = Math.random() * width;
-        const startY = Math.random() * height * 0.18;
-        const endX = startX + (Math.random() - 0.5) * width * 0.35;
-        const endY = startY + height * 0.3 + Math.random() * height * 0.22;
-
-        lightningBolts.push({
-            x1: startX,
-            y1: startY,
-            x2: endX,
-            y2: endY,
-
-            branches: Array.from({
-                length: 8 + Math.floor(Math.random() * 8)
-            }, () => ({
-                offsetX: (Math.random() - 0.5) * 220,
-                offsetY: 30 + Math.random() * 140
-            })),
-
-            life: 8 + Math.random() * 6,
-            timer: 0,
-            intensity: 0.8 + Math.random() * 0.4
-        });
-    }
-
-    if (lightningBolts.length === 0) return;
-
-    // flash global
-    ctx.fillStyle = `rgba(200,230,255,${Math.random() * 0.05})`;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    ctx.lineCap = 'round';
-
-    lightningBolts.forEach((bolt, index) => {
-
-        bolt.timer++;
-
-        const progress = bolt.timer / bolt.life;
-
-        if (progress >= 1) {
-            lightningBolts.splice(index, 1);
-            return;
-        }
-
-        const alpha = (1 - progress) * bolt.intensity;
-
-        // piscar elétrico
-        const flicker = Math.random() * 0.5 + 0.5;
-        ctx.globalAlpha = flicker;
-
-        // gera caminho principal
-        const mainPath = drawJaggedLightning(
-            bolt.x1,
-            bolt.y1,
-            bolt.x2,
-            bolt.y2,
-            45,
-            16
-        );
-
-        // camada externa glow
-        ctx.strokeStyle = `rgba(100,180,255,${alpha * 0.35})`;
-        ctx.lineWidth = 10;
-        ctx.shadowBlur = 90;
-        ctx.shadowColor = 'rgba(100,180,255,1)';
-        drawBoltPath(mainPath);
-
-        // camada média azul
-        ctx.strokeStyle = `rgba(180,220,255,${alpha * 0.8})`;
-        ctx.lineWidth = 5;
-        ctx.shadowBlur = 60;
-        ctx.shadowColor = 'rgba(180,220,255,1)';
-        drawBoltPath(mainPath);
-
-        // núcleo branco
-        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
-        ctx.lineWidth = 1.6;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = 'rgba(255,255,255,1)';
-        drawBoltPath(mainPath);
-
-        // ramificações
-        bolt.branches.forEach((branch) => {
-
-            const bx = bolt.x1 + (bolt.x2 - bolt.x1) * (Math.random() * 0.7);
-
-            const by = bolt.y1 + (bolt.y2 - bolt.y1) * (Math.random() * 0.7);
-
-            const ex = bx + branch.offsetX;
-            const ey = by + branch.offsetY;
-
-            const branchPath = drawJaggedLightning(
-                bx,
-                by,
-                ex,
-                ey,
-                18,
-                6
-            );
-
-            ctx.strokeStyle = `rgba(220,240,255,${alpha * 0.6})`;
-            ctx.lineWidth = 1.2;
-            ctx.shadowBlur = 25;
-            drawBoltPath(branchPath);
-        });
-
-    });
-
-    ctx.restore();
-}
     function drawOrbs(time) {
         const palette = getThemePalette();
 
@@ -337,42 +258,97 @@ function drawLightning() {
         });
     }
 
-    function drawShootingStars(time) {
-        ctx.save();
-        ctx.lineCap = 'round';
-        ctx.globalCompositeOperation = 'lighter';
+    function isSlideEffectDisabled() {
+        const activeSlide = document.querySelector('.slide.active');
+        if (!activeSlide) return false;
+        
+        // Verifica se o slide possui data-disable-decorations="true" ou classe 'no-decorations'
+        return activeSlide.dataset.disableDecorations === 'true' || activeSlide.classList.contains('no-decorations');
+    }
 
-        shootingStars.forEach((star) => {
-            star.timer += 1;
-            if (star.timer > star.life) {
-                if (Math.random() < 0.24) {
-                    star.x = Math.random() * width - 200;
-                    star.y = Math.random() * height + 20;
-                    star.length = 80 + Math.random() * 120;
-                    star.vx = 4 + Math.random() * 4;
-                    star.vy = 0.6 + Math.random() * 1.2;
-                    star.life = Math.random() * 120 + 70 + 30;
-                    star.timer = 0;
+    function drawLeaves(time) {
+        if (isSlideEffectDisabled()) return;
+        const palette = getThemePalette();
+        ctx.save();
+
+        leaves.forEach((leaf) => {
+            leaf.oscillation += leaf.oscSpeed;
+            leaf.x += leaf.vx + Math.sin(leaf.oscillation) * 0.5;
+            leaf.y += leaf.vy;
+            leaf.angle += leaf.spin;
+
+            if (leaf.y > height + 20) {
+                leaf.y = -20;
+                leaf.x = Math.random() * width;
+            }
+
+            ctx.save();
+            ctx.translate(leaf.x, leaf.y);
+            ctx.rotate(leaf.angle);
+
+            ctx.beginPath();
+            ctx.moveTo(0, -leaf.size);
+            ctx.bezierCurveTo(leaf.size * 0.8, -leaf.size * 0.3, leaf.size * 0.8, leaf.size * 0.5, 0, leaf.size);
+            ctx.bezierCurveTo(-leaf.size * 0.8, leaf.size * 0.5, -leaf.size * 0.8, -leaf.size * 0.3, 0, -leaf.size);
+            
+            ctx.fillStyle = palette.leafFill;
+            ctx.fill();
+            ctx.strokeStyle = palette.leafStroke;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, -leaf.size * 0.8);
+            ctx.lineTo(0, leaf.size * 0.9);
+            ctx.strokeStyle = palette.leafStroke;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+
+            ctx.restore();
+        });
+
+        ctx.restore();
+    }
+
+    function drawMolecules(time) {
+        if (isSlideEffectDisabled()) return;
+        const palette = getThemePalette();
+        ctx.save();
+
+        molecules.forEach((mol) => {
+            mol.x += mol.vx;
+            mol.y += mol.vy;
+            mol.rotation += mol.rotSpeed;
+
+            if (mol.x < -40) mol.x = width + 40;
+            if (mol.x > width + 40) mol.x = -40;
+
+            ctx.save();
+            ctx.translate(mol.x, mol.y);
+            ctx.rotate(mol.rotation);
+
+            ctx.strokeStyle = palette.chemBond;
+            ctx.lineWidth = 1.2;
+            for (let i = 0; i < mol.atoms.length; i++) {
+                for (let j = i + 1; j < mol.atoms.length; j++) {
+                    ctx.beginPath();
+                    ctx.moveTo(mol.atoms[i].ox, mol.atoms[i].oy);
+                    ctx.lineTo(mol.atoms[j].ox, mol.atoms[j].oy);
+                    ctx.stroke();
                 }
             }
 
-            const progress = Math.sin((star.timer / star.life) * Math.PI);
-            const trailLength = star.length * progress + 4000;
-            const alpha = Math.max(0, Math.min(1, progress * 1.4));
-            const x = star.x + star.vx * star.timer * 0.5;
-            const y = star.y + star.vy * star.timer * 0.5;
+            mol.atoms.forEach((atom) => {
+                ctx.beginPath();
+                ctx.arc(atom.ox, atom.oy, atom.radius, 0, Math.PI * 2);
+                ctx.fillStyle = palette.chemAtom;
+                ctx.fill();
+                ctx.strokeStyle = palette.leafStroke;
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            });
 
-            const gradient = ctx.createLinearGradient(star.x, star.y, x, y);
-            gradient.addColorStop(0, 'rgba(255,255,255,0)');
-            gradient.addColorStop(0.6, `rgba(255,255,255,${alpha * 0.33})`);
-            gradient.addColorStop(1, `rgba(255,255,255,${alpha})`);
-
-            ctx.strokeStyle = gradient;
-            ctx.lineWidth = 1.8;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x - star.vx * trailLength * 0.06, y - star.vy * trailLength * 0.06);
-            ctx.stroke();
+            ctx.restore();
         });
 
         ctx.restore();
@@ -395,15 +371,9 @@ function drawLightning() {
             const size = particle.radius * particle.sizeFactor;
             const gradient = ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, size * 3);
 
-            if (particle.type === 'star') {
-                gradient.addColorStop(0, `rgba(255, 255, 255, ${fade})`);
-                gradient.addColorStop(0.2, `${palette.starTrail}`);
-                gradient.addColorStop(0.6, 'rgba(255, 255, 255, 0.06)');
-            } else {
-                gradient.addColorStop(0, `${palette.particleGlow}`);
-                gradient.addColorStop(0.3, `${palette.particleSecondary}`);
-                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            }
+            gradient.addColorStop(0, `${palette.particleGlow}`);
+            gradient.addColorStop(0.3, `${palette.particleSecondary}`);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
             ctx.fillStyle = gradient;
             ctx.beginPath();
@@ -418,10 +388,9 @@ function drawLightning() {
         ctx.clearRect(0, 0, width, height);
         drawBackground(time);
         drawOrbs(time);
+        drawMolecules(time);
+        drawLeaves(time);
         drawParticles(time);
-        if (!document.body.classList.contains('shader-lite')) {
-            drawShootingStars(time);
-        }
         requestAnimationFrame(animate);
     }
 

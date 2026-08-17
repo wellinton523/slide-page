@@ -1,5 +1,12 @@
 let currentSlide = 0;
-let currentDeckName = document.body.classList.contains('theme-bella') ? 'bella' : 'maria';
+let currentDeckName = 'maria';
+
+if (document.body.classList.contains('theme-bella')) {
+    currentDeckName = 'bella';
+} else if (document.body.classList.contains('theme-nature') || document.body.classList.contains('theme-verde')) {
+    currentDeckName = 'nature';
+}
+
 let transitionOverlay = null;
 
 function getSlides() {
@@ -18,8 +25,16 @@ function ensureTransitionOverlay() {
 }
 
 function setTheme(theme) {
-    document.body.classList.remove('theme-maria', 'theme-bella');
-    document.body.classList.add(theme === 'bella' ? 'theme-bella' : 'theme-maria');
+    document.body.classList.remove('theme-maria', 'theme-bella', 'theme-nature', 'theme-verde');
+    
+    if (theme === 'bella') {
+        document.body.classList.add('theme-bella');
+    } else if (theme === 'nature') {
+        document.body.classList.add('theme-nature');
+    } else {
+        document.body.classList.add('theme-maria');
+    }
+    
     currentDeckName = theme;
 }
 
@@ -33,12 +48,12 @@ function updateShaderButton() {
 
     const icon = button.querySelector('.material-symbols-rounded');
     if (icon) {
-        icon.textContent = isLite ? 'speed' : 'speed';
+        icon.textContent = isLite ? 'visibility_off' : 'park';
     }
 
     const label = button.querySelector('.btn-label');
     if (label) {
-        label.textContent = isLite ? 'Shader completo' : 'Shader leve';
+        label.textContent = isLite ? 'Efeitos Ocultos' : 'Efeitos Ativos';
     }
 }
 
@@ -71,14 +86,18 @@ function goToSlide(index) {
     renderSlides();
 }
 
+/* Lógica rotativa entre os 3 slides */
 function updateToggleButtonLabel() {
     document.querySelectorAll('[data-action="toggle"]').forEach((button) => {
-        if (currentDeckName === 'bella') {
-            button.textContent = 'Lei Maria da Penha • Lei nº 11.340';
-            button.dataset.target = 'maria';
-        } else {
+        if (currentDeckName === 'maria') {
             button.textContent = 'School of Darkness • 1954';
             button.dataset.target = 'bella';
+        } else if (currentDeckName === 'bella') {
+            button.textContent = 'Ciência & Natureza';
+            button.dataset.target = 'nature';
+        } else {
+            button.textContent = 'Lei Maria da Penha • Lei nº 11.340';
+            button.dataset.target = 'maria';
         }
     });
 }
@@ -90,7 +109,9 @@ async function switchDeck(target) {
     const overlay = ensureTransitionOverlay();
     overlay.classList.add('active');
 
-    const source = target === 'bella' ? 'bella-dodd.html' : 'index.html';
+    let source = 'index.html';
+    if (target === 'bella') source = 'bella-dodd.html';
+    if (target === 'nature') source = 'Feijão-Fradinho.html';
 
     try {
         const response = await fetch(source);
